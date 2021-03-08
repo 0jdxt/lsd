@@ -28,13 +28,14 @@ human-sort = "0.2"
 term_grid = "0.1"
 chrono-humanize = "0.0"
 unicode-width = "0.1"
-lscolors = "0.7"
-wild = "2.0"
-globset = "0.4"
-xdg = "2.1"
-yaml-rust = "0.4"
-termize = "0.1"
+lscolors = "0.7"#{path="../lscolors"}#"0.7"
 chrono = "0.4"
+wild = "2.0.*"
+globset = "0.4.*"
+xdg = "2.1.*"
+yaml-rust = "0.4.*"
+termize = "0.1"
+fxhash = "0.2.1"
 
 [target.'cfg(unix)'.dependencies]
 users = "0.11"
@@ -54,3 +55,5 @@ tempfile = "3"
 
 [features]
 sudo = []
+[profile.release]
+debug = true

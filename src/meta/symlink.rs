@@ -9,12 +9,13 @@ pub struct SymLink {
     valid: bool,
 }
 
-impl From<&Path> for SymLink {
-    fn from(path: &Path) -> Self {
-        path.read_link()
+impl<P: AsRef<Path>> From<&P> for SymLink {
+    fn from(path: &P) -> Self {
+        path.as_ref()
+            .read_link()
             .map(|target| Self {
                 target: Some(target.to_string_lossy().into()),
-                valid: match (path.parent(), target.is_absolute()) {
+                valid: match (path.as_ref().parent(), target.is_absolute()) {
                     (Some(p), false) => p.join(target).exists(),
                     _ => target.exists(),
                 },

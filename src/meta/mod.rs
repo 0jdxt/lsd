@@ -30,16 +30,16 @@ use std::path::{Component, Path, PathBuf};
 
 #[derive(Clone, Debug)]
 pub struct Meta {
+    pub metadata: std::fs::Metadata,
     pub name: Name,
     pub path: PathBuf,
     pub permissions: Permissions,
-    pub date: Date,
     pub owner: Owner,
-    pub file_type: FileType,
     pub size: Size,
-    pub symlink: SymLink,
-    pub indicator: Indicator,
+    pub date: Date,
     pub inode: INode,
+    pub file_type: FileType,
+    pub indicator: Indicator,
     pub content: Option<Vec<Meta>>,
 }
 
@@ -71,7 +71,7 @@ impl Meta {
             }
         };
 
-        let mut content: Vec<Meta> = Vec::new();
+        let mut content: Vec<Meta> = Vec::with_capacity(10);
 
         if let Display::All = flags.display {
             let mut current_meta = self.clone();
@@ -198,19 +198,25 @@ impl Meta {
         let file_type = FileType::new(&metadata, symlink_meta.as_ref(), &permissions);
         let name = Name::new(&path, file_type);
         let inode = INode::from(&metadata);
+        let size = Size::from(&metadata);
+        let date = Date::from(&metadata);
 
         Ok(Self {
-            inode,
+            metadata: metadata.clone(),
             path: path.to_path_buf(),
-            symlink: SymLink::from(path),
-            size: Size::from(&metadata),
-            date: Date::from(&metadata),
+            inode,
             indicator: Indicator::from(file_type),
             owner,
             permissions,
+            size,
+            date,
             name,
             file_type,
             content: None,
         })
+    }
+
+    pub fn get_symlink(&self) -> SymLink {
+        SymLink::from(&self.path)
     }
 }

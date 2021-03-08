@@ -1,22 +1,25 @@
 use crate::color::{ColoredString, Colors, Elem};
 use crate::flags::{DateFlag, Flags};
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Duration, Local, Utc};
 use chrono_humanize::HumanTime;
 use std::fs::Metadata;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Date(DateTime<Local>);
+pub struct Date(DateTime<Utc>);
 
 impl<'a> From<&'a Metadata> for Date {
     fn from(meta: &'a Metadata) -> Self {
-        let modified_time = meta.modified().expect("failed to retrieve modified date");
-        Date(modified_time.into())
+        Self(
+            meta.modified()
+                .expect("failed to retrieve modified date")
+                .into(),
+        )
     }
 }
 
 impl Date {
     pub fn render(&self, colors: &Colors, flags: &Flags) -> ColoredString {
-        let ago = Local::now() - self.0;
+        let ago = Utc::now() - self.0;
 
         let elem = if ago < Duration::hours(1) {
             Elem::HourOld
@@ -30,10 +33,11 @@ impl Date {
     }
 
     pub fn date_string(&self, flags: &Flags) -> String {
+        let date = self.0.with_timezone(&Local);
         match &flags.date {
-            DateFlag::Date => self.0.format("%a %b %e %X %G").to_string(),
-            DateFlag::Relative => HumanTime::from(self.0 - Local::now()).to_string(),
-            DateFlag::Formatted(format) => self.0.format(&format).to_string(),
+            DateFlag::Date => date.format("%a %b %e %X %G").to_string(),
+            DateFlag::Relative => HumanTime::from(date - Local::now()).to_string(),
+            DateFlag::Formatted(format) => date.format(&format).to_string(),
         }
     }
 }

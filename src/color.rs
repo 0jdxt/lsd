@@ -96,18 +96,18 @@ impl Colors {
         input: String,
         path: &Path,
         elem: &Elem,
+        meta: &std::fs::Metadata,
     ) -> ColoredString<'a> {
-        let style_from_path = self.style_from_path(path);
-        match style_from_path {
-            Some(style_from_path) => style_from_path.paint(input),
+        match self.style_from_path(path, meta) {
+            Some(style) => style.paint(input),
             None => self.colorize(input, elem),
         }
     }
 
-    fn style_from_path(&self, path: &Path) -> Option<Style> {
+    fn style_from_path(&self, path: &Path, meta: &std::fs::Metadata) -> Option<Style> {
         match &self.lscolors {
             Some(lscolors) => lscolors
-                .style_for_path(path)
+                .style_for_path_with_metadata(path, Some(meta))
                 .map(lscolors::Style::to_ansi_term_style),
             None => None,
         }
@@ -116,12 +116,10 @@ impl Colors {
     fn style(&self, elem: &Elem) -> Style {
         match &self.lscolors {
             Some(lscolors) => match self.get_indicator_from_elem(elem) {
-                Some(style) => {
-                    let style = lscolors.style_for_indicator(style);
-                    style
-                        .map(lscolors::Style::to_ansi_term_style)
-                        .unwrap_or_default()
-                }
+                Some(style) => lscolors
+                    .style_for_indicator(style)
+                    .map(lscolors::Style::to_ansi_term_style)
+                    .unwrap_or_default(),
                 None => self.style_default(elem),
             },
             None => self.style_default(elem),
