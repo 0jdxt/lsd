@@ -54,7 +54,7 @@ fn inner_display_grid(
     // The first iteration (depth == 0) corresponds to the inputs given by the
     // user. We defer displaying directories given by the user unless we've been
     // asked to display the directory itself (rather than its contents).
-    let skip_dirs = (depth == 0) && (flags.display != Display::DirectoryItself);
+    let skip_dirs = (depth == 0) && (flags.display != Display::DirectoryOnly);
 
     // print the files first.
     for meta in metas {
@@ -251,6 +251,7 @@ fn get_output<'a>(
     for block in flags.blocks.0.iter() {
         match block {
             Block::INode => strings.push(meta.inode.render(colors)),
+            Block::Links => strings.push(meta.links.render(colors)),
             Block::Permission => {
                 let s: &[ColoredString] = &[
                     meta.file_type.render(colors),
@@ -340,11 +341,14 @@ fn get_padding_rules(metas: &[Meta], flags: &Flags) -> HashMap<Block, usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app;
     use crate::color;
     use crate::color::Colors;
     use crate::icon;
     use crate::icon::Icons;
     use crate::meta::{FileType, Name};
+    use crate::Config;
+    use assert_fs::prelude::*;
     use std::path::Path;
 
     // TODO: tempdir
@@ -370,7 +374,7 @@ mod tests {
             );
             let output = name.render(
                 &Colors::new(color::Theme::NoColor),
-                &Icons::new(icon::Theme::NoIcon),
+                &Icons::new(icon::Theme::NoIcon, " ".to_string()),
                 &DisplayOption::FileName,
                 &meta,
             );
@@ -403,7 +407,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::Fancy),
+                    &Icons::new(icon::Theme::Fancy, " ".to_string()),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )
@@ -436,7 +440,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoLscolors),
-                    &Icons::new(icon::Theme::NoIcon),
+                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )
@@ -473,7 +477,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::NoIcon),
+                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )

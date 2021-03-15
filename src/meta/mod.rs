@@ -2,7 +2,8 @@ mod date;
 mod filetype;
 mod indicator;
 mod inode;
-mod name;
+mod links;
+pub mod name;
 mod owner;
 mod permissions;
 mod size;
@@ -15,6 +16,7 @@ pub use self::date::Date;
 pub use self::filetype::FileType;
 pub use self::indicator::Indicator;
 pub use self::inode::INode;
+pub use self::links::Links;
 pub use self::name::{DisplayOption, Name};
 pub use self::owner::Owner;
 pub use self::permissions::Permissions;
@@ -35,11 +37,13 @@ pub struct Meta {
     pub path: PathBuf,
     pub permissions: Permissions,
     pub owner: Owner,
+    pub file_type: FileType,
     pub size: Size,
+    pub symlink: SymLink,
+    pub indicator: Indicator,
     pub date: Date,
     pub inode: INode,
-    pub file_type: FileType,
-    pub indicator: Indicator,
+    pub links: Links,
     pub content: Option<Vec<Meta>>,
 }
 
@@ -49,7 +53,11 @@ impl Meta {
         depth: usize,
         flags: &Flags,
     ) -> Result<Option<Vec<Meta>>, std::io::Error> {
-        if depth == 0 || flags.display == Display::DirectoryItself {
+        if depth == 0 {
+            return Ok(None);
+        }
+
+        if flags.display == Display::DirectoryOnly && flags.layout != Layout::Tree {
             return Ok(None);
         }
 
@@ -66,19 +74,20 @@ impl Meta {
         let entries = match self.path.read_dir() {
             Ok(entries) => entries,
             Err(err) => {
-                print_error!("lsd: {}: {}\n", self.path.display(), err);
+                print_error!("{}: {}.", self.path.display(), err);
                 return Ok(None);
             }
         };
 
         let mut content: Vec<Meta> = Vec::with_capacity(10);
 
-        if let Display::All = flags.display {
+        if Display::All == flags.display && flags.layout != Layout::Tree {
             let mut current_meta = self.clone();
-            current_meta.name.set_name(".".to_owned());
+            current_meta.name.set_name(".");
 
-            let parent_meta =
+            let mut parent_meta =
                 Self::from_path(&self.path.join(Component::ParentDir), flags.dereference.0)?;
+            parent_meta.name.set_name("..");
 
             content.push(current_meta);
             content.push(parent_meta);
@@ -92,7 +101,7 @@ impl Meta {
                 continue;
             }
 
-            if let Display::DisplayOnlyVisible = flags.display {
+            if let Display::VisibleOnly = flags.display {
                 if name.to_string_lossy().starts_with('.') {
                     continue;
                 }
@@ -105,6 +114,15 @@ impl Meta {
                     continue;
                 }
             };
+
+            // skip files for --tree -d
+            if flags.layout == Layout::Tree {
+                if let Display::DirectoryOnly = flags.display {
+                    if !entry.file_type()?.is_dir() {
+                        continue;
+                    }
+                }
+            }
 
             match entry_meta.recurse_into(depth - 1, &flags) {
                 Ok(content) => entry_meta.content = content,
@@ -147,7 +165,7 @@ impl Meta {
         let metadata = match metadata {
             Ok(meta) => meta,
             Err(err) => {
-                print_error!("lsd: {}: {}\n", path.display(), err);
+                print_error!("{}: {}.", path.display(), err);
                 return 0;
             }
         };
@@ -160,7 +178,7 @@ impl Meta {
             let entries = match path.read_dir() {
                 Ok(entries) => entries,
                 Err(err) => {
-                    print_error!("lsd: {}: {}\n", path.display(), err);
+                    print_error!("{}: {}.", path.display(), err);
                     return size;
                 }
             };
@@ -168,7 +186,7 @@ impl Meta {
                 let path = match entry {
                     Ok(entry) => entry.path(),
                     Err(err) => {
-                        print_error!("lsd: {}: {}\n", path.display(), err);
+                        print_error!("{}: {}.", path.display(), err);
                         continue;
                     }
                 };
@@ -198,18 +216,19 @@ impl Meta {
         let file_type = FileType::new(&metadata, symlink_meta.as_ref(), &permissions);
         let name = Name::new(&path, file_type);
         let inode = INode::from(&metadata);
-        let size = Size::from(&metadata);
-        let date = Date::from(&metadata);
+        let links = Links::from(&metadata);
 
         Ok(Self {
             metadata: metadata.clone(),
-            path: path.to_path_buf(),
             inode,
+            links,
+            path: path.to_path_buf(),
+            symlink: SymLink::from(&path),
+            size: Size::from(&metadata),
+            date: Date::from(&metadata),
             indicator: Indicator::from(file_type),
             owner,
             permissions,
-            size,
-            date,
             name,
             file_type,
             content: None,

@@ -33,8 +33,8 @@ impl Name {
         self.path.extension().map(|e| e.to_string_lossy())
     }
 
-    pub fn set_name(&mut self, new_name: String) {
-        self.name = Some(new_name);
+    pub fn set_name(&mut self, new_name: &str) {
+        self.name = Some(new_name.to_owned());
     }
 
     pub fn get_name(&self) -> Cow<'_, str> {
@@ -165,7 +165,7 @@ mod test {
     #[cfg(unix)] // Windows uses different default permissions
     fn test_print_file_name() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Create the file;
         let file_path = tmp_dir.path().join("file.txt");
@@ -185,7 +185,7 @@ mod test {
     #[test]
     fn test_print_dir_name() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Chreate the directory
         let dir_path = tmp_dir.path().join("directory");
@@ -209,7 +209,7 @@ mod test {
     #[cfg(unix)] // Symlinks are hard on Windows
     fn test_print_symlink_name_file() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Create the file;
         let file_path = tmp_dir.path().join("file.tmp");
@@ -237,7 +237,7 @@ mod test {
     #[cfg(unix)] // Symlinks are hard on Windows
     fn test_print_symlink_name_dir() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Create the directory;
         let dir_path = tmp_dir.path().join("tmp.d");
@@ -265,7 +265,7 @@ mod test {
     #[cfg(unix)]
     fn test_print_other_type_name() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Create the pipe;
         let pipe_path = tmp_dir.path().join("pipe.tmp");
@@ -290,7 +290,7 @@ mod test {
     #[test]
     fn test_print_without_icon_or_color() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::NoIcon);
+        let icons = Icons::new(icon::Theme::NoIcon, " ".to_string());
 
         // Create the file;
         let file_path = tmp_dir.path().join("file.txt");
@@ -513,7 +513,7 @@ mod test {
     #[cfg(unix)]
     fn test_special_chars_in_filename() {
         let tmp_dir = tempdir().expect("failed to create temp dir");
-        let icons = Icons::new(icon::Theme::Fancy);
+        let icons = Icons::new(icon::Theme::Fancy, " ".to_string());
 
         // Create the file;
         let file_path = tmp_dir.path().join("file\ttab.txt");

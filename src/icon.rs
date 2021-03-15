@@ -34,12 +34,6 @@ macro_rules! hashmap { // adapted from `maplit` to use FxHashMap
     }};
 }
 
-// const ICON_SPACE: &str = " ";
-
-// In order to add a new icon, write the unicode value like '\ue5fb" then
-// run the command below in vim:
-//
-// s#\\u[0-9a-f]*#\=eval('"'.submatch(0).'"')#
 impl Icons {
     pub fn new(theme: Theme) -> Self {
         let display_icons = theme != Theme::NoIcon;
@@ -126,6 +120,10 @@ impl Icons {
     }
 }
 
+// In order to add a new icon, write the unicode value like "\ue5fb" then
+// run the command below in vim:
+//
+// s#\\u[0-9a-f]*#\=eval('"'.submatch(0).'"')#
 fn default_icons_by_name() -> FxHashMap<&'static str, char> {
     // Note: names must be lower-case
     hashmap! {
@@ -368,7 +366,7 @@ fn default_icons_by_extension() -> FxHashMap<&'static str, char> {
 
 #[cfg(test)]
 mod test {
-    use super::{default_icons_by_extension, default_icons_by_name, Icons, Theme};
+    use super::{Icons, Theme};
     use crate::meta::Meta;
     use std::fs::File;
     use tempfile::tempdir;
@@ -380,7 +378,7 @@ mod test {
         File::create(&file_path).expect("failed to create file");
         let meta = Meta::from_path(&file_path, false).unwrap();
 
-        let icon = Icons::new(Theme::NoIcon);
+        let icon = Icons::new(Theme::NoIcon, " ".to_string());
         let icon = icon.get(&meta.name);
 
         assert_eq!(icon, None);
@@ -393,8 +391,8 @@ mod test {
         File::create(&file_path).expect("failed to create file");
         let meta = Meta::from_path(&file_path, false).unwrap();
 
-        let icon = Icons::new(Theme::Fancy);
-        let icon = icon.get(&meta.name);
+        let icon = Icons::new(Theme::Fancy, " ".to_string());
+        let icon_str = icon.get(&meta.name);
 
         assert_eq!(icon, Some('\u{f016}')); // 
     }
@@ -406,8 +404,8 @@ mod test {
         File::create(&file_path).expect("failed to create file");
         let meta = Meta::from_path(&file_path, false).unwrap();
 
-        let icon = Icons::new(Theme::Unicode);
-        let icon = icon.get(&meta.name);
+        let icon = Icons::new(Theme::Unicode, " ".to_string());
+        let icon_str = icon.get(&meta.name);
 
         assert_eq!(icon, Some('\u{1f5cb}'));
     }
@@ -418,8 +416,8 @@ mod test {
         let file_path = tmp_dir.path();
         let meta = Meta::from_path(&file_path.to_path_buf(), false).unwrap();
 
-        let icon = Icons::new(Theme::Fancy);
-        let icon = icon.get(&meta.name);
+        let icon = Icons::new(Theme::Fancy, " ".to_string());
+        let icon_str = icon.get(&meta.name);
 
         assert_eq!(icon, Some('\u{f115}')); // 
     }
@@ -430,8 +428,8 @@ mod test {
         let file_path = tmp_dir.path();
         let meta = Meta::from_path(&file_path.to_path_buf(), false).unwrap();
 
-        let icon = Icons::new(Theme::Unicode);
-        let icon = icon.get(&meta.name);
+        let icon = Icons::new(Theme::Unicode, " ".to_string());
+        let icon_str = icon.get(&meta.name);
 
         assert_eq!(icon, Some('\u{1f5c1}'));
     }
@@ -442,8 +440,8 @@ mod test {
         let file_path = tmp_dir.path();
         let meta = Meta::from_path(&file_path.to_path_buf(), false).unwrap();
 
-        let icon = Icons::new(Theme::Fancy);
-        let icon = icon.get(&meta.name);
+        let icon = Icons::new(Theme::Fancy, " ".to_string());
+        let icon_str = icon.get(&meta.name);
 
         assert_eq!(icon, Some('\u{f115}')); // 
     }
@@ -457,8 +455,8 @@ mod test {
             File::create(&file_path).expect("failed to create file");
             let meta = Meta::from_path(&file_path, false).unwrap();
 
-            let icon = Icons::new(Theme::Fancy);
-            let icon = icon.get(&meta.name);
+            let icon = Icons::new(Theme::Fancy, " ".to_string());
+            let icon_str = icon.get(&meta.name);
 
             assert_eq!(icon, Some(file_icon));
         }
@@ -473,8 +471,8 @@ mod test {
             File::create(&file_path).expect("failed to create file");
             let meta = Meta::from_path(&file_path, false).unwrap();
 
-            let icon = Icons::new(Theme::Fancy);
-            let icon = icon.get(&meta.name);
+            let icon = Icons::new(Theme::Fancy, " ".to_string());
+            let icon_str = icon.get(&meta.name);
 
             assert_eq!(icon, Some(file_icon));
         }

@@ -47,17 +47,20 @@ use std::path::PathBuf;
 #[macro_export]
 macro_rules! print_error {
     ($($arg:tt)*) => {
-        use std::io::Write;
-
-        let stderr = std::io::stderr();
-
         {
-            let mut handle = stderr.lock();
-            // We can write on stderr, so we simply ignore the error and don't print
-            // and stop with success.
-            let res = handle.write_all(std::format!($($arg)*).as_bytes());
-            if res.is_err() {
-                std::process::exit(0);
+            use std::io::Write;
+
+            let stderr = std::io::stderr();
+
+            {
+                let mut handle = stderr.lock();
+                // We can write on stderr, so we simply ignore the error and don't print
+                // and stop with success.
+                let res = handle.write_all(std::format!("lsd: {}\n\n",
+                                                        std::format!($($arg)*)).as_bytes());
+                if res.is_err() {
+                    std::process::exit(0);
+                }
             }
         }
     };
@@ -101,7 +104,7 @@ fn main() {
     let config = if matches.is_present("ignore-config") {
         Config::with_none()
     } else {
-        Config::read_config()
+        Config::default()
     };
     let flags = Flags::configure_from(&matches, &config).unwrap_or_else(|err| err.exit());
     let core = Core::new(flags);
