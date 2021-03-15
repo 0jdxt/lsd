@@ -54,10 +54,6 @@ mod tests {
         assert!(success, "failed to exec touch");
 
         let inode = INode::from(&file_path.metadata().unwrap());
-
-        #[cfg(unix)]
-        assert_eq!(inode.index, 208143);
-        #[cfg(windows)]
-        assert!(inode.index.is_none());
+        assert!(inode.index > 0);
     }
 }

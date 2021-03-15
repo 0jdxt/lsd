@@ -341,14 +341,11 @@ fn get_padding_rules(metas: &[Meta], flags: &Flags) -> HashMap<Block, usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app;
     use crate::color;
     use crate::color::Colors;
     use crate::icon;
     use crate::icon::Icons;
     use crate::meta::{FileType, Name};
-    use crate::Config;
-    use assert_fs::prelude::*;
     use std::path::Path;
 
     // TODO: tempdir
@@ -357,6 +354,7 @@ mod tests {
         for (s, l) in &[
             ("Ｈｅｌｌｏ,ｗｏｒｌｄ!", 22),
             ("ASCII1234-_", 11),
+            ("File with space", 15),
             ("制作样本。", 10),
             ("日本語", 6),
             ("샘플은 무료로 드리겠습니다", 26),
@@ -430,6 +428,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            println!("{:?}", path);
             let name = Name::new(
                 &path,
                 FileType::File {
