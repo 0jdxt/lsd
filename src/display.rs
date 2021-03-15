@@ -60,7 +60,7 @@ fn inner_display_grid(
     for meta in metas {
         // Maybe skip showing the directory meta now; show its contents later.
         if skip_dirs
-            && (matches!(meta.file_type, FileType::Directory{..})
+            && (matches!(meta.file_type, FileType::Directory { .. })
                 || (matches!(meta.file_type, FileType::SymLink { is_dir: true })
                     && flags.layout != Layout::OneLine))
         {
@@ -374,7 +374,7 @@ mod tests {
             );
             let output = name.render(
                 &Colors::new(color::Theme::NoColor),
-                &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                &Icons::new(icon::Theme::NoIcon),
                 &DisplayOption::FileName,
                 &meta,
             );
@@ -407,7 +407,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::Fancy, " ".to_string()),
+                    &Icons::new(icon::Theme::Fancy),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )
@@ -440,7 +440,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoLscolors),
-                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                    &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )
@@ -477,7 +477,7 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                    &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
                 )

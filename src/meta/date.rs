@@ -52,7 +52,7 @@ impl Date {
 
 #[cfg(test)]
 mod test {
-    use super::{Date, DateTime, Duration, Local};
+    use super::Date;
     use crate::color::{Colors, Theme};
     use crate::flags::{DateFlag, Flags};
     use ansi_term::Colour;
