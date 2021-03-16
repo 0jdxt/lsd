@@ -273,15 +273,25 @@ fn get_output<'a>(
                 let s: String =
                     if flags.no_symlink.0 || flags.dereference.0 || flags.layout == Layout::Grid {
                         ANSIStrings(&[
-                            meta.name
-                                .render(colors, icons, &display_option, &meta.metadata),
+                            meta.name.render(
+                                colors,
+                                icons,
+                                &display_option,
+                                &meta.metadata,
+                                &flags.icons.separator.0,
+                            ),
                             meta.indicator.render(&flags),
                         ])
                         .to_string()
                     } else {
                         ANSIStrings(&[
-                            meta.name
-                                .render(colors, icons, &display_option, &meta.metadata),
+                            meta.name.render(
+                                colors,
+                                icons,
+                                &display_option,
+                                &meta.metadata,
+                                &flags.icons.separator.0,
+                            ),
                             meta.indicator.render(&flags),
                             meta.get_symlink().render(colors, &flags),
                         ])
@@ -375,6 +385,7 @@ mod tests {
                 &Icons::new(icon::Theme::NoIcon),
                 &DisplayOption::FileName,
                 &meta,
+                " ",
             );
 
             assert_eq!(get_visible_width(&output), *l);
@@ -408,6 +419,7 @@ mod tests {
                     &Icons::new(icon::Theme::Fancy),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
@@ -428,7 +440,6 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
-            println!("{:?}", path);
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -442,6 +453,7 @@ mod tests {
                     &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
@@ -479,6 +491,7 @@ mod tests {
                     &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
                     &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
