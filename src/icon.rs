@@ -108,14 +108,21 @@ impl Icons {
     }
 
     fn icons_by_shebang(&self, cmd: &str) -> Option<&char> {
+        // This function tries to get an icon from the interpreter.
+        // First we check for when the interpreter name differs from the extension
+        // otherwise we check if interpreter is also an extension e.g. php, lua
         if cmd.ends_with("sh") {
             self.icons_by_extension.get("sh")
         } else if cmd.starts_with("python") {
             self.icons_by_extension.get("py")
         } else if cmd.starts_with("node") {
             self.icons_by_extension.get("js")
+        } else if cmd.starts_with("perl") {
+            self.icons_by_extension.get("pl")
+        } else if cmd.starts_with("ruby") {
+            self.icons_by_extension.get("rb")
         } else {
-            None
+            self.icons_by_extension.get(cmd)
         }
     }
 }
@@ -282,6 +289,7 @@ fn default_icons_by_extension() -> FxHashMap<&'static str, char> {
         /*  */ "ogg" => '\u{f001}',
         /*  */ "ogv" => '\u{f03d}',
         /*  */ "otf" => '\u{f031}',
+        /*  */ "pcap" => '\u{f471}',
         /*  */ "pdf" => '\u{f1c1}',
         /*  */ "php" => '\u{e73d}',
         /*  */ "pl" => '\u{e769}',
@@ -368,7 +376,7 @@ fn default_icons_by_extension() -> FxHashMap<&'static str, char> {
 mod test {
     use super::{Icons, Theme};
     use crate::meta::Meta;
-    use std::fs::File;
+    use std::{fs::File, io::Write};
     use tempfile::tempdir;
 
     #[test]
@@ -460,6 +468,29 @@ mod test {
 
             let icon = Icons::new(Theme::Fancy).get(&meta.name);
             assert_eq!(icon, Some(file_icon));
+        }
+    }
+
+    #[test]
+    fn test_shebangs() {
+        let tmp_dir = tempdir().expect("failed to create temp dir");
+        let file_path = tmp_dir.path().join("file");
+
+        for (expected, shebang) in vec![
+            ('\u{e606}', "env python2.7"), // test #!/env cmd
+            ('\u{e606}', "python3"),       // test #!/cmd
+            ('\u{e606}', "python -vv"),    // test #!/cmd args
+            ('\u{e620}', "lua"),           // test shebang is extension
+        ] {
+            let mut f = File::create(&file_path).expect("failed to create file");
+            f.write(format!("#!/path/to/{}\n", shebang).as_ref())
+                .unwrap();
+            f.flush().unwrap();
+
+            let meta = Meta::from_path(&file_path, false).unwrap();
+            let icon = Icons::new(Theme::Fancy).get(&meta.name);
+
+            assert_eq!(icon, Some(expected));
         }
     }
 }
