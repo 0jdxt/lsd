@@ -406,6 +406,7 @@ mod tests {
             ("🔬", 4),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -440,6 +441,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -478,6 +480,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
