@@ -16,7 +16,7 @@ impl<'a> From<&'a Metadata> for INode {
 
     #[cfg(windows)]
     fn from(_: &Metadata) -> Self {
-        Self {};
+        Self {}
     }
 }
 
