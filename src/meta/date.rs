@@ -19,18 +19,17 @@ impl<'a> From<&'a Metadata> for Date {
 
 impl Date {
     pub fn render(&self, colors: &Colors, flags: &Flags) -> ColoredString {
-        let now = Local::now();
+        let now = Local::now() - self.0;
 
-        let elem;
-        if self.0 > now - Duration::hours(1) {
-            elem = &Elem::HourOld;
-        } else if self.0 > now - Duration::days(1) {
-            elem = &Elem::DayOld;
+        let elem = if now < Duration::hours(1) {
+            Elem::HourOld
+        } else if now < Duration::days(1) {
+            Elem::DayOld
         } else {
-            elem = &Elem::Older;
-        }
+            Elem::Older
+        };
 
-        colors.colorize(self.date_string(&flags), elem)
+        colors.colorize(self.date_string(&flags), &elem)
     }
 
     pub fn date_string(&self, flags: &Flags) -> String {

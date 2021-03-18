@@ -17,7 +17,7 @@ pub use self::filetype::FileType;
 pub use self::indicator::Indicator;
 pub use self::inode::INode;
 pub use self::links::Links;
-pub use self::name::Name;
+pub use self::name::{DisplayOption, Name};
 pub use self::owner::Owner;
 pub use self::permissions::Permissions;
 pub use self::size::Size;
@@ -28,20 +28,20 @@ use crate::flags::{Display, Flags, Layout};
 use crate::print_error;
 
 use std::fs::read_link;
-use std::io::{Error, ErrorKind};
 use std::path::{Component, Path, PathBuf};
 
 #[derive(Clone, Debug)]
 pub struct Meta {
+    pub metadata: std::fs::Metadata,
     pub name: Name,
     pub path: PathBuf,
     pub permissions: Permissions,
-    pub date: Date,
     pub owner: Owner,
     pub file_type: FileType,
     pub size: Size,
     pub symlink: SymLink,
     pub indicator: Indicator,
+    pub date: Date,
     pub inode: INode,
     pub links: Links,
     pub content: Option<Vec<Meta>>,
@@ -79,17 +79,15 @@ impl Meta {
             }
         };
 
-        let mut content: Vec<Meta> = Vec::new();
+        let mut content: Vec<Meta> = Vec::with_capacity(10);
 
         if Display::All == flags.display && flags.layout != Layout::Tree {
-            let mut current_meta;
-
-            current_meta = self.clone();
-            current_meta.name.name = ".".to_owned();
+            let mut current_meta = self.clone();
+            current_meta.name.set_name(".");
 
             let mut parent_meta =
                 Self::from_path(&self.path.join(Component::ParentDir), flags.dereference.0)?;
-            parent_meta.name.name = "..".to_owned();
+            parent_meta.name.set_name("..");
 
             content.push(current_meta);
             content.push(parent_meta);
@@ -97,11 +95,7 @@ impl Meta {
 
         for entry in entries {
             let entry = entry?;
-            let path = entry.path();
-
-            let name = path
-                .file_name()
-                .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "invalid file name"))?;
+            let name = entry.file_name();
 
             if flags.ignore_globs.0.is_match(&name) {
                 continue;
@@ -113,10 +107,10 @@ impl Meta {
                 }
             }
 
-            let mut entry_meta = match Self::from_path(&path, flags.dereference.0) {
+            let mut entry_meta = match Self::from_path(&entry.path(), flags.dereference.0) {
                 Ok(res) => res,
                 Err(err) => {
-                    print_error!("{}: {}.", path.display(), err);
+                    print_error!("lsd: {:?}: {}\n", entry.path(), err);
                     continue;
                 }
             };
@@ -133,7 +127,7 @@ impl Meta {
             match entry_meta.recurse_into(depth - 1, &flags) {
                 Ok(content) => entry_meta.content = content,
                 Err(err) => {
-                    print_error!("{}: {}.", path.display(), err);
+                    print_error!("lsd: {:?}: {}\n", entry.path(), err);
                     continue;
                 }
             };
@@ -206,10 +200,9 @@ impl Meta {
 
     pub fn from_path(path: &Path, dereference: bool) -> Result<Self, std::io::Error> {
         // If the file is a link then retrieve link metadata instead with target metadata (if present).
-        let (metadata, symlink_meta) = if read_link(path).is_ok() && !dereference {
-            (path.symlink_metadata()?, path.metadata().ok())
-        } else {
-            (path.metadata()?, None)
+        let (metadata, symlink_meta) = match path.symlink_metadata() {
+            Ok(metadata) if !dereference => (metadata, path.metadata().ok()),
+            _ => (path.metadata()?, None),
         };
 
         #[cfg(unix)]
@@ -226,10 +219,11 @@ impl Meta {
         let links = Links::from(&metadata);
 
         Ok(Self {
+            metadata: metadata.clone(),
             inode,
             links,
             path: path.to_path_buf(),
-            symlink: SymLink::from(path),
+            symlink: SymLink::from(&path),
             size: Size::from(&metadata),
             date: Date::from(&metadata),
             indicator: Indicator::from(file_type),
@@ -239,5 +233,9 @@ impl Meta {
             file_type,
             content: None,
         })
+    }
+
+    pub fn get_symlink(&self) -> SymLink {
+        SymLink::from(&self.path)
     }
 }

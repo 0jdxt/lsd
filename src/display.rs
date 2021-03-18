@@ -1,12 +1,10 @@
 use crate::color::{ColoredString, Colors};
 use crate::flags::{Block, Display, Flags, Layout};
 use crate::icon::Icons;
-use crate::meta::name::DisplayOption;
-use crate::meta::{FileType, Meta};
+use crate::meta::{DisplayOption, FileType, Meta};
 use ansi_term::{ANSIString, ANSIStrings};
 use std::collections::HashMap;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
-use terminal_size::terminal_size;
 use unicode_width::UnicodeWidthStr;
 
 const EDGE: &str = "\u{251c}\u{2500}\u{2500}"; // "├──"
@@ -15,11 +13,6 @@ const CORNER: &str = "\u{2514}\u{2500}\u{2500}"; // "└──"
 const BLANK: &str = "   ";
 
 pub fn grid(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> String {
-    let term_width = match terminal_size() {
-        Some((w, _)) => Some(w.0 as usize),
-        None => None,
-    };
-
     inner_display_grid(
         &DisplayOption::None,
         metas,
@@ -27,7 +20,7 @@ pub fn grid(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> St
         colors,
         icons,
         0,
-        term_width,
+        termize::dimensions().map(|(w, _)| w as usize),
     )
 }
 
@@ -67,7 +60,7 @@ fn inner_display_grid(
     for meta in metas {
         // Maybe skip showing the directory meta now; show its contents later.
         if skip_dirs
-            && (matches!(meta.file_type, FileType::Directory{..})
+            && (matches!(meta.file_type, FileType::Directory { .. })
                 || (matches!(meta.file_type, FileType::SymLink { is_dir: true })
                     && flags.layout != Layout::OneLine))
         {
@@ -146,7 +139,6 @@ fn inner_display_tree(
     depth: usize,
     prefix: &str,
 ) -> String {
-    let mut output = String::new();
     let last_idx = metas.len();
 
     let padding_rules = get_padding_rules(&metas, flags);
@@ -177,6 +169,7 @@ fn inner_display_tree(
     let content = grid.fit_into_columns(flags.blocks.0.len()).to_string();
     let mut lines = content.lines();
 
+    let mut output = String::new();
     for (idx, meta) in metas.iter().enumerate() {
         let is_last_folder_elem = idx + 1 != last_idx;
 
@@ -191,19 +184,20 @@ fn inner_display_tree(
             output += " ";
         }
 
-        output += &String::from(lines.next().unwrap());
+        output += lines.next().unwrap();
         output += "\n";
 
         if meta.content.is_some() {
-            let mut new_prefix = String::from(prefix);
-
-            if depth > 0 {
-                if is_last_folder_elem {
-                    new_prefix += LINE;
+            let new_prefix = String::from(prefix)
+                + if depth > 0 {
+                    if is_last_folder_elem {
+                        LINE
+                    } else {
+                        BLANK
+                    }
                 } else {
-                    new_prefix += BLANK;
-                }
-            }
+                    ""
+                };
 
             output += &inner_display_tree(
                 &meta.content.as_ref().unwrap(),
@@ -225,10 +219,10 @@ fn should_display_folder_path(depth: usize, metas: &[Meta], flags: &Flags) -> bo
     } else {
         let folder_number = metas
             .iter()
-            .filter(|x| {
-                matches!(x.file_type, FileType::Directory { .. })
-                    || (matches!(x.file_type, FileType::SymLink { is_dir: true })
-                        && flags.layout != Layout::OneLine)
+            .filter(|x| match x.file_type {
+                FileType::Directory { .. } => true,
+                FileType::SymLink { is_dir: true } => flags.layout != Layout::OneLine,
+                _ => false,
             })
             .count();
 
@@ -279,15 +273,27 @@ fn get_output<'a>(
                 let s: String =
                     if flags.no_symlink.0 || flags.dereference.0 || flags.layout == Layout::Grid {
                         ANSIStrings(&[
-                            meta.name.render(colors, icons, &display_option),
+                            meta.name.render(
+                                colors,
+                                icons,
+                                &display_option,
+                                &meta.metadata,
+                                &flags.icons.separator.0,
+                            ),
                             meta.indicator.render(&flags),
                         ])
                         .to_string()
                     } else {
                         ANSIStrings(&[
-                            meta.name.render(colors, icons, &display_option),
+                            meta.name.render(
+                                colors,
+                                icons,
+                                &display_option,
+                                &meta.metadata,
+                                &flags.icons.separator.0,
+                            ),
                             meta.indicator.render(&flags),
-                            meta.symlink.render(colors, &flags),
+                            meta.get_symlink().render(colors, &flags),
                         ])
                         .to_string()
                     };
@@ -352,11 +358,13 @@ mod tests {
     use crate::meta::{FileType, Name};
     use std::path::Path;
 
+    // TODO: tempdir
     #[test]
     fn test_display_get_visible_width_without_icons() {
         for (s, l) in &[
             ("Ｈｅｌｌｏ,ｗｏｒｌｄ!", 22),
             ("ASCII1234-_", 11),
+            ("File with space", 15),
             ("制作样本。", 10),
             ("日本語", 6),
             ("샘플은 무료로 드리겠습니다", 26),
@@ -364,6 +372,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            let meta = std::fs::File::create(path).unwrap().metadata().unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -373,8 +382,10 @@ mod tests {
             );
             let output = name.render(
                 &Colors::new(color::Theme::NoColor),
-                &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                &Icons::new(icon::Theme::NoIcon),
                 &DisplayOption::FileName,
+                &meta,
+                " ",
             );
 
             assert_eq!(get_visible_width(&output), *l);
@@ -395,6 +406,7 @@ mod tests {
             ("🔬", 4),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -405,8 +417,10 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::Fancy, " ".to_string()),
+                    &Icons::new(icon::Theme::Fancy),
                     &DisplayOption::FileName,
+                    &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
@@ -427,6 +441,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -437,8 +452,10 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoLscolors),
-                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                    &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
+                    &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
@@ -463,6 +480,7 @@ mod tests {
             ("🔬", 2),
         ] {
             let path = Path::new(s);
+            std::fs::File::create(path).unwrap();
             let name = Name::new(
                 &path,
                 FileType::File {
@@ -473,8 +491,10 @@ mod tests {
             let output = name
                 .render(
                     &Colors::new(color::Theme::NoColor),
-                    &Icons::new(icon::Theme::NoIcon, " ".to_string()),
+                    &Icons::new(icon::Theme::NoIcon),
                     &DisplayOption::FileName,
+                    &path.metadata().unwrap(),
+                    " ",
                 )
                 .to_string();
 
