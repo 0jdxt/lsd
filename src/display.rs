@@ -1,14 +1,11 @@
+use crate::color::{ColoredString, Colors};
 use crate::flags::{Block, Display, Flags, Layout};
 use crate::hashmap;
 use crate::icon::Icons;
 use crate::meta::{DisplayOption, FileType, Meta};
-use crate::{
-    color::{ColoredString, Colors},
-    meta::SymLink,
-};
 use ansi_term::{ANSIString, ANSIStrings};
 use fxhash::FxHashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
+use simple_counter::generate_counter;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use unicode_width::UnicodeWidthStr;
 
@@ -29,7 +26,9 @@ pub fn grid(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> St
     )
 }
 
-static COUNT: (AtomicU32, AtomicU32) = (AtomicU32::new(0), AtomicU32::new(0));
+generate_counter!(DIR_COUNT, u32);
+generate_counter!(FILE_COUNT, u32);
+
 pub fn tree(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> String {
     let mut grid = Grid::new(GridOptions {
         filling: Filling::Spaces(1),
@@ -52,8 +51,8 @@ pub fn tree(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> St
     format!(
         "{}\n{} directories, {} files\n",
         grid.fit_into_columns(flags.blocks.0.len()),
-        COUNT.0.load(Ordering::SeqCst),
-        COUNT.1.load(Ordering::SeqCst)
+        DIR_COUNT::next(),
+        FILE_COUNT::next()
     )
 }
 
@@ -178,9 +177,12 @@ fn inner_display_tree(
         };
 
         if meta.file_type.is_dirlike() {
-            COUNT.0.fetch_add(1, Ordering::SeqCst);
+            // dont count current directory
+            if tree_depth_prefix.0 > 0 {
+                DIR_COUNT::next();
+            }
         } else {
-            COUNT.1.fetch_add(1, Ordering::SeqCst);
+            FILE_COUNT::next();
         }
 
         for block in get_output(
@@ -516,7 +518,10 @@ mod tests {
             &Icons::new(icon::Theme::NoIcon),
         );
 
-        assert_eq!("one.d\n├── .hidden\n└── two\n", output);
+        assert_eq!(
+            "one.d\n├── .hidden\n└── two\n\n0 directories, 2 files\n",
+            output
+        );
     }
 
     /// Different level of folder may form a different width
@@ -623,6 +628,9 @@ mod tests {
             &Icons::new(icon::Theme::NoIcon),
         );
 
-        assert!(output.ends_with("└── two\n"));
+        let mut lines = output.lines();
+        assert_eq!(lines.next_back(), Some("0 directories, 1 files"));
+        lines.next_back();
+        assert!(lines.next_back().unwrap().ends_with("└── two"));
     }
 }
