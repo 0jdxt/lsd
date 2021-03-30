@@ -176,6 +176,8 @@ fn inner_display_tree(
             tree_depth_prefix.1.to_string()
         };
 
+        println!("{}", meta.name.get_name());
+
         if meta.file_type.is_dirlike() {
             // dont count current directory
             if tree_depth_prefix.0 > 0 {
