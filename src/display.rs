@@ -36,13 +36,14 @@ pub fn tree(metas: &[Meta], flags: &Flags, colors: &Colors, icons: &Icons) -> St
     });
 
     let padding_rules = get_padding_rules(&metas, flags);
-    let mut index = 0;
-    for (i, block) in flags.blocks.0.iter().enumerate() {
-        if let Block::Name = block {
-            index = i;
-            break;
-        }
-    }
+
+    let index = match flags.blocks.0.iter().position(|&b| b == Block::Name) {
+        Some(i) => i,
+        None => 0,
+    };
+
+    DIR_COUNT::reset();
+    FILE_COUNT::reset();
 
     for cell in inner_display_tree(metas, &flags, colors, icons, (0, ""), &padding_rules, index) {
         grid.add(cell);
